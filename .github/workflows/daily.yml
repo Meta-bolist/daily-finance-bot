@@ -27,25 +27,142 @@ jobs:
           kst = datetime.now(timezone(timedelta(hours=9)))
           weekday_kr = ['월', '화', '수', '목', '금', '토', '일']
           date_str = kst.strftime('%Y/%m/%d') + '(' + weekday_kr[kst.weekday()] + ')'
-
           headers = {'User-Agent': 'Mozilla/5.0'}
+          ERR = '불러오기 실패'
 
           # 날씨 (김포)
-          weather_res = requests.get(
-              'https://api.open-meteo.com/v1/forecast'
-              '?latitude=37.6154&longitude=126.7224'
-              '&daily=weathercode&timezone=Asia/Seoul&forecast_days=1'
-          ).json()
-          wcode = weather_res['daily']['weathercode'][0]
-          if wcode == 0:
-              w_emoji = '\u2600\ufe0f'
-          elif wcode in [1, 2]:
-              w_emoji = '\U0001f324\ufe0f'
-          elif wcode == 3:
-              w_emoji = '\u2601\ufe0f'
-          elif wcode in [51, 53, 55, 61, 63, 65, 80, 81, 82]:
-              w_emoji = '\U0001f327\ufe0f'
-          elif wcode in [71, 73, 75, 77, 85, 86]:
-              w_emoji = '\U0001f328\ufe0f'
-          elif wcode in [95, 96, 99]:
-              w_emoji = '\u26c8\uf
+          try:
+              weather_res = requests.get(
+                  'https://api.open-meteo.com/v1/forecast'
+                  '?latitude=37.6154&longitude=126.7224'
+                  '&daily=weathercode&timezone=Asia/Seoul&forecast_days=1'
+              ).json()
+              wcode = weather_res['daily']['weathercode'][0]
+              if wcode == 0:
+                  w_emoji = 'sunny'
+              elif wcode in [1, 2]:
+                  w_emoji = 'partly_cloudy'
+              elif wcode == 3:
+                  w_emoji = 'cloudy'
+              elif wcode in [51, 53, 55, 61, 63, 65, 80, 81, 82]:
+                  w_emoji = 'rainy'
+              elif wcode in [71, 73, 75, 77, 85, 86]:
+                  w_emoji = 'snowy'
+              elif wcode in [95, 96, 99]:
+                  w_emoji = 'thunder'
+              else:
+                  w_emoji = 'foggy'
+              weather_map = {
+                  'sunny': chr(0x2600)+chr(0xfe0f),
+                  'partly_cloudy': chr(0x1f324)+chr(0xfe0f),
+                  'cloudy': chr(0x2601)+chr(0xfe0f),
+                  'rainy': chr(0x1f327)+chr(0xfe0f),
+                  'snowy': chr(0x1f328)+chr(0xfe0f),
+                  'thunder': chr(0x26c8)+chr(0xfe0f),
+                  'foggy': chr(0x1f32b)+chr(0xfe0f),
+              }
+              w_emoji = weather_map[w_emoji]
+          except Exception:
+              w_emoji = '?'
+
+          # 공포탐욕지수
+          try:
+              data = fear_greed.get()
+              score = round(data['score'], 1)
+              rating = data['rating'].lower()
+              rating_map = {
+                  'extreme fear': chr(0x1f631) + ' 극단적 공포',
+                  'fear': chr(0x1f630) + ' 공포',
+                  'neutral': chr(0x1f610) + ' 중립',
+                  'greed': chr(0x1f974) + ' 탐욕',
+                  'extreme greed': chr(0x1f911) + ' 극단적 탐욕'
+              }
+              rating_kr = rating_map.get(rating, rating)
+              fg_line = '{} 공포탐욕    {} {}'.format(
+                  rating_kr.split()[0], score, ' '.join(rating_kr.split()[1:])
+              )
+          except Exception:
+              fg_line = '? 공포탐욕    ' + ERR
+
+          # 환율
+          try:
+              fx = requests.get('https://api.exchangerate-api.com/v4/latest/USD').json()
+              krw_today = round(fx['rates']['KRW'])
+              yesterday = (kst - timedelta(days=1)).strftime('%Y-%m-%d')
+              fx_hist = requests.get(
+                  'https://api.exchangerate-api.com/v4/history/USD/{}'.format(yesterday)
+              ).json()
+              krw_yesterday = round(fx_hist['rates']['KRW'])
+              fx_arrow = chr(0x1f4c8) if krw_today > krw_yesterday else chr(0x1f4c9)
+              fx_line = '{} 환율        {:,}원'.format(fx_arrow, krw_today)
+          except Exception:
+              fx_line = '? 환율        ' + ERR
+
+          # 미국채 10년물
+          try:
+              t10_res = requests.get(
+                  'https://query1.finance.yahoo.com/v8/finance/chart/%5ETNX'
+                  '?interval=1d&range=2d',
+                  headers=headers
+              ).json()
+              t10 = round(t10_res['chart']['result'][0]['meta']['regularMarketPrice'], 2)
+              t10_signal = chr(0x1f7e1) if t10 >= 4.5 else chr(0x1f7e2)
+              t10_comment = '금리 상승 압력' if t10 >= 4.5 else '안정구간 유지'
+              t10_line = '{} 미국채10년물  {}%  {}'.format(t10_signal, t10, t10_comment)
+          except Exception:
+              t10_line = '? 미국채10년물  ' + ERR
+
+          # 달러 인덱스
+          try:
+              dxy_res = requests.get(
+                  'https://query1.finance.yahoo.com/v8/finance/chart/DX-Y.NYB'
+                  '?interval=1d&range=2d',
+                  headers=headers
+              ).json()
+              dxy = round(dxy_res['chart']['result'][0]['meta']['regularMarketPrice'], 1)
+              dxy_signal = chr(0x1f7e2) if 100 <= dxy <= 105 else chr(0x1f7e1)
+              dxy_comment = '안전구간 유지' if 100 <= dxy <= 105 else '구간 이탈 주의'
+              dxy_line = '{} 달러 인덱스  {}  {}'.format(dxy_signal, dxy, dxy_comment)
+          except Exception:
+              dxy_line = '? 달러 인덱스  ' + ERR
+
+          # VIX
+          try:
+              vix_res = requests.get(
+                  'https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX'
+                  '?interval=1d&range=2d',
+                  headers=headers
+              ).json()
+              vix = round(vix_res['chart']['result'][0]['meta']['regularMarketPrice'], 1)
+              vix_signal = chr(0x1f534) if vix >= 30 else (chr(0x1f7e1) if vix >= 20 else chr(0x1f7e2))
+              vix_comment = '패닉 셀링 발생' if vix >= 30 else ('단기 주의' if vix >= 20 else '시장 안정')
+              vix_line = '{} VIX         {}   {}'.format(vix_signal, vix, vix_comment)
+          except Exception:
+              vix_line = '? VIX         ' + ERR
+
+          # WTI 유가
+          try:
+              wti_res = requests.get(
+                  'https://query1.finance.yahoo.com/v8/finance/chart/CL%3DF'
+                  '?interval=1d&range=2d',
+                  headers=headers
+              ).json()
+              wti = round(wti_res['chart']['result'][0]['meta']['regularMarketPrice'], 1)
+              wti_signal = chr(0x1f534) if wti >= 90 else (chr(0x1f7e1) if wti < 80 else chr(0x1f7e2))
+              wti_comment = '인플레 자극 위험' if wti >= 90 else ('경기 둔화 신호' if wti < 80 else '안정구간 유지')
+              wti_line = '{} WTI 유가    {}$  {}'.format(wti_signal, wti, wti_comment)
+          except Exception:
+              wti_line = '? WTI 유가    ' + ERR
+
+          msg = '[{} 주요지표 {}]\n{}\n{}\n{}\n{}\n{}\n{}'.format(
+              date_str, w_emoji,
+              fx_line, fg_line,
+              t10_line, dxy_line,
+              vix_line, wti_line
+          )
+
+          requests.post(
+              'https://api.telegram.org/bot{}/sendMessage'.format(token),
+              json={'chat_id': chat_id, 'text': msg}
+          )
+          PYEOF
