@@ -2,7 +2,7 @@ name: Daily Finance Alert
 
 on:
   schedule:
-    - cron: '0 3 * * 1-5'  # 매일 KST 12:00 (UTC 03:00), 평일만
+    - cron: '0 3 * * 1-5'
   workflow_dispatch:
 
 jobs:
@@ -15,8 +15,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           pip install fear-greed requests -q
-
-          python3 << 'EOF'
+          python3 - << 'PYEOF'
           import requests
           import os
           import fear_greed
@@ -24,31 +23,25 @@ jobs:
           token = os.environ['TELEGRAM_TOKEN']
           chat_id = os.environ['TELEGRAM_CHAT_ID']
 
-          # 공포탐욕지수
           data = fear_greed.get()
           score = round(data['score'], 1)
-          rating = data['rating']
+          rating = data['rating'].lower()
 
           rating_kr = {
-              'extreme fear': '극단적 공포 😱',
-              'fear': '공포 😰',
-              'neutral': '중립 😐',
-              'greed': '탐욕 😏',
-              'extreme greed': '극단적 탐욕 🤑'
-          }.get(rating.lower(), rating)
+              'extreme fear': 'Extreme Fear (극단적 공포)',
+              'fear': 'Fear (공포)',
+              'neutral': 'Neutral (중립)',
+              'greed': 'Greed (탐욕)',
+              'extreme greed': 'Extreme Greed (극단적 탐욕)'
+          }.get(rating, rating)
 
-          # 원달러 환율
           fx = requests.get('https://api.exchangerate-api.com/v4/latest/USD').json()
           krw = round(fx['rates']['KRW'])
 
-          msg = f"""📊 오늘의 시장 지표
-
-💹 원/달러 환율: {krw:,}원
-
-😨 공포탐욕지수: {score} ({rating_kr})"""
+          msg = "[오늘의 시장 지표]\n\n원/달러 환율: {:,}원\n공포탐욕지수: {} ({})".format(krw, score, rating_kr)
 
           requests.post(
-              f'https://api.telegram.org/bot{token}/sendMessage',
+              'https://api.telegram.org/bot{}/sendMessage'.format(token),
               json={'chat_id': chat_id, 'text': msg}
           )
-          EOF
+          PYEOF
