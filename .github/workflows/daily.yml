@@ -19,26 +19,32 @@ jobs:
           import requests
           import os
           import fear_greed
+          from datetime import datetime, timezone, timedelta
 
           token = os.environ['TELEGRAM_TOKEN']
           chat_id = os.environ['TELEGRAM_CHAT_ID']
+
+          kst = datetime.now(timezone(timedelta(hours=9)))
+          date_str = kst.strftime('%Y/%m/%d')
 
           data = fear_greed.get()
           score = round(data['score'], 1)
           rating = data['rating'].lower()
 
           rating_kr = {
-              'extreme fear': 'Extreme Fear (극단적 공포)',
-              'fear': 'Fear (공포)',
-              'neutral': 'Neutral (중립)',
-              'greed': 'Greed (탐욕)',
-              'extreme greed': 'Extreme Greed (극단적 탐욕)'
+              'extreme fear': '\U0001f631 극단적 공포',
+              'fear': '\U0001f628 공포',
+              'neutral': '\U0001f610 중립',
+              'greed': '\U0001f60f 탐욕',
+              'extreme greed': '\U0001f911 극단적 탐욕'
           }.get(rating, rating)
 
           fx = requests.get('https://api.exchangerate-api.com/v4/latest/USD').json()
           krw = round(fx['rates']['KRW'])
 
-          msg = "[오늘의 시장 지표]\n\n원/달러 환율: {:,}원\n공포탐욕지수: {} ({})".format(krw, score, rating_kr)
+          msg = "[{} 주요지표]\n원/달러 환율: {:,}원\n공포탐욕지수: {} ({})".format(
+              date_str, krw, score, rating_kr
+          )
 
           requests.post(
               'https://api.telegram.org/bot{}/sendMessage'.format(token),
