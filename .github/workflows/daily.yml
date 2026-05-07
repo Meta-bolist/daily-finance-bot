@@ -28,6 +28,8 @@ jobs:
           weekday_kr = ['월', '화', '수', '목', '금', '토', '일']
           date_str = kst.strftime('%Y/%m/%d') + '(' + weekday_kr[kst.weekday()] + ')'
 
+          headers = {'User-Agent': 'Mozilla/5.0'}
+
           # 날씨 (김포)
           weather_res = requests.get(
               'https://api.open-meteo.com/v1/forecast'
@@ -46,92 +48,4 @@ jobs:
           elif wcode in [71, 73, 75, 77, 85, 86]:
               w_emoji = '\U0001f328\ufe0f'
           elif wcode in [95, 96, 99]:
-              w_emoji = '\u26c8\ufe0f'
-          else:
-              w_emoji = '\U0001f32b\ufe0f'
-
-          # 공포탐욕지수
-          data = fear_greed.get()
-          score = round(data['score'], 1)
-          rating = data['rating'].lower()
-          rating_kr = {
-              'extreme fear': '\U0001f631 극단적 공포',
-              'fear': '\U0001f630 공포',
-              'neutral': '\U0001f610 중립',
-              'greed': '\U0001f974 탐욕',
-              'extreme greed': '\U0001f911 극단적 탐욕'
-          }.get(rating, rating)
-
-          # 환율
-          fx = requests.get('https://api.exchangerate-api.com/v4/latest/USD').json()
-          krw_today = round(fx['rates']['KRW'])
-          yesterday = (kst - timedelta(days=1)).strftime('%Y-%m-%d')
-          fx_hist = requests.get(
-              'https://api.exchangerate-api.com/v4/history/USD/{}'.format(yesterday)
-          ).json()
-          krw_yesterday = round(fx_hist['rates']['KRW'])
-          fx_arrow = '\U0001f4c8' if krw_today > krw_yesterday else '\U0001f4c9'
-
-          # 미국채 10년물
-          treasury = requests.get(
-              'https://api.stlouisfed.org/fred/series/observations'
-              '?series_id=DGS10&api_key=e0a5b4e3f1c2d6a7b8c9d0e1f2a3b4c5'
-              '&sort_order=desc&limit=1&file_type=json'
-          ).json()
-          t10 = float(treasury['observations'][0]['value'])
-          t10_signal = '\U0001f7e1' if t10 >= 4.5 else '\U0001f7e2'
-          t10_comment = '금리 상승 압력' if t10 >= 4.5 else '안정구간 유지'
-
-          # 달러 인덱스
-          dxy_res = requests.get(
-              'https://query1.finance.yahoo.com/v8/finance/chart/DX-Y.NYB'
-              '?interval=1d&range=2d',
-              headers={'User-Agent': 'Mozilla/5.0'}
-          ).json()
-          dxy = round(dxy_res['chart']['result'][0]['meta']['regularMarketPrice'], 1)
-          dxy_signal = '\U0001f7e2' if 100 <= dxy <= 105 else '\U0001f7e1'
-          dxy_comment = '안전구간 유지' if 100 <= dxy <= 105 else '지수 이상 유월 주의'
-
-          # VIX
-          vix_res = requests.get(
-              'https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX'
-              '?interval=1d&range=2d',
-              headers={'User-Agent': 'Mozilla/5.0'}
-          ).json()
-          vix = round(vix_res['chart']['result'][0]['meta']['regularMarketPrice'], 1)
-          vix_signal = '\U0001f534' if vix >= 30 else ('\U0001f7e1' if vix >= 20 else '\U0001f7e2')
-          vix_comment = '패닉 셀링 발생' if vix >= 30 else ('단기 주의' if vix >= 20 else '시장 안정')
-
-          # WTI 유가
-          wti_res = requests.get(
-              'https://query1.finance.yahoo.com/v8/finance/chart/CL%3DF'
-              '?interval=1d&range=2d',
-              headers={'User-Agent': 'Mozilla/5.0'}
-          ).json()
-          wti = round(wti_res['chart']['result'][0]['meta']['regularMarketPrice'], 1)
-          wti_signal = '\U0001f534' if wti >= 90 else ('\U0001f7e1' if wti < 80 else '\U0001f7e2')
-          wti_comment = '인플레 자극 위험' if wti >= 90 else ('경기 둔화 신호' if wti < 80 else '안정구간 유지')
-
-          msg = (
-              '[{} 주요지표 {}]\n'
-              '{} 환율        {:,}원\n'
-              '{} 공포탐욕    {} {}\n'
-              '{} 미국채10년물  {}%  {}\n'
-              '{} 달러 인덱스  {}  {}\n'
-              '{} VIX         {}   {}\n'
-              '{} WTI 유가    {}$  {}'
-          ).format(
-              date_str, w_emoji,
-              fx_arrow, krw_today,
-              rating_kr.split()[0], score, ' '.join(rating_kr.split()[1:]),
-              t10_signal, t10, t10_comment,
-              dxy_signal, dxy, dxy_comment,
-              vix_signal, vix, vix_comment,
-              wti_signal, wti, wti_comment
-          )
-
-          requests.post(
-              'https://api.telegram.org/bot{}/sendMessage'.format(token),
-              json={'chat_id': chat_id, 'text': msg}
-          )
-          PYEOF
+              w_emoji = '\u26c8\uf
