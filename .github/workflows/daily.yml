@@ -69,6 +69,28 @@ jobs:
           except Exception:
               fg_line = '? 공포탐욕 ' + ERR
 
+          # VIX
+          try:
+              vix_res = requests.get(
+                  'https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX'
+                  '?interval=1d&range=2d',
+                  headers=headers
+              ).json()
+              vix = round(vix_res['chart']['result'][0]['meta']['regularMarketPrice'], 1)
+              if vix < 15:
+                  vix_emoji, vix_comment = chr(0x1f60a), '극도의 안도'
+              elif vix < 20:
+                  vix_emoji, vix_comment = chr(0x1f610), '정상'
+              elif vix < 30:
+                  vix_emoji, vix_comment = chr(0x1f61f), '경계 및 불안'
+              elif vix < 40:
+                  vix_emoji, vix_comment = chr(0x1f628), '공포 및 투매'
+              else:
+                  vix_emoji, vix_comment = chr(0x1f92f), '극심한 패닉'
+              vix_line = '{} VIX {} {}'.format(vix_emoji, vix, vix_comment)
+          except Exception:
+              vix_line = '? VIX ' + ERR
+
           # 환율
           try:
               fx_res = requests.get(
@@ -115,20 +137,6 @@ jobs:
           except Exception:
               dxy_line = '? 달러인덱스 ' + ERR
 
-          # VIX
-          try:
-              vix_res = requests.get(
-                  'https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX'
-                  '?interval=1d&range=2d',
-                  headers=headers
-              ).json()
-              vix = round(vix_res['chart']['result'][0]['meta']['regularMarketPrice'], 1)
-              vix_signal = chr(0x1f534) if vix >= 30 else (chr(0x1f7e1) if vix >= 20 else chr(0x1f7e2))
-              vix_comment = '패닉 셀링 발생' if vix >= 30 else ('단기 주의' if vix >= 20 else '시장 안정')
-              vix_line = '{} VIX {} {}'.format(vix_signal, vix, vix_comment)
-          except Exception:
-              vix_line = '? VIX ' + ERR
-
           # WTI 유가
           try:
               wti_res = requests.get(
@@ -145,9 +153,8 @@ jobs:
 
           msg = '[{} 주요지표 {}]\n{}\n{}\n{}\n{}\n{}\n{}'.format(
               date_str, w_emoji,
-              fx_line, fg_line,
-              t10_line, dxy_line,
-              vix_line, wti_line
+              fx_line, fg_line, vix_line,
+              t10_line, dxy_line, wti_line
           )
 
           requests.post(
