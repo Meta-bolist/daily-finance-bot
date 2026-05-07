@@ -38,12 +38,7 @@ jobs:
                   '&daily=weathercode&timezone=Asia/Seoul&forecast_days=1'
               ).json()
               wcode = weather_res['daily']['weathercode'][0]
-              weather_map = {
-                  0: chr(0x2600)+chr(0xfe0f),
-                  1: chr(0x1f324)+chr(0xfe0f),
-                  2: chr(0x1f324)+chr(0xfe0f),
-                  3: chr(0x2601)+chr(0xfe0f),
-              }
+              weather_map = {0: chr(0x2600)+chr(0xfe0f), 1: chr(0x1f324)+chr(0xfe0f), 2: chr(0x1f324)+chr(0xfe0f), 3: chr(0x2601)+chr(0xfe0f)}
               if wcode in weather_map:
                   w_emoji = weather_map[wcode]
               elif wcode in [51,53,55,61,63,65,80,81,82]:
@@ -64,17 +59,17 @@ jobs:
               rating = data['rating'].lower()
               rating_map = {
                   'extreme fear': (chr(0x1f631), '극단적공포'),
-                  'fear':         (chr(0x1f630), '공포      '),
-                  'neutral':      (chr(0x1f610), '중립      '),
-                  'greed':        (chr(0x1f974), '탐욕      '),
+                  'fear':         (chr(0x1f630), '공포'),
+                  'neutral':      (chr(0x1f610), '중립'),
+                  'greed':        (chr(0x1f974), '탐욕'),
                   'extreme greed':(chr(0x1f911), '극단적탐욕'),
               }
               fg_emoji, fg_label = rating_map.get(rating, ('?', rating))
-              fg_line = '{} 공포탐욕  {:5}  {}'.format(fg_emoji, score, fg_label.strip())
+              fg_line = '{} 공포탐욕 {} {}'.format(fg_emoji, score, fg_label)
           except Exception:
-              fg_line = '? 공포탐욕  ' + ERR
+              fg_line = '? 공포탐욕 ' + ERR
 
-          # 환율 (Yahoo Finance)
+          # 환율
           try:
               fx_res = requests.get(
                   'https://query1.finance.yahoo.com/v8/finance/chart/USDKRW=X'
@@ -88,9 +83,9 @@ jobs:
               fx_arrow = chr(0x1f4c8) if krw_today > krw_yesterday else chr(0x1f4c9)
               diff = krw_today - krw_yesterday
               diff_str = '+{}원'.format(diff) if diff > 0 else '{}원'.format(diff)
-              fx_line = '{} 환율      {:,}원  ({})'.format(fx_arrow, krw_today, diff_str)
+              fx_line = '{} 환율 {:,}원 ({})'.format(fx_arrow, krw_today, diff_str)
           except Exception:
-              fx_line = '? 환율      ' + ERR
+              fx_line = '? 환율 ' + ERR
 
           # 미국채 10년물
           try:
@@ -102,7 +97,7 @@ jobs:
               t10 = round(t10_res['chart']['result'][0]['meta']['regularMarketPrice'], 2)
               t10_signal = chr(0x1f7e1) if t10 >= 4.5 else chr(0x1f7e2)
               t10_comment = '금리 상승 압력' if t10 >= 4.5 else '안정구간 유지'
-              t10_line = '{} 미국채10년 {:5}%  {}'.format(t10_signal, t10, t10_comment)
+              t10_line = '{} 미국채10년 {}% {}'.format(t10_signal, t10, t10_comment)
           except Exception:
               t10_line = '? 미국채10년 ' + ERR
 
@@ -116,7 +111,7 @@ jobs:
               dxy = round(dxy_res['chart']['result'][0]['meta']['regularMarketPrice'], 1)
               dxy_signal = chr(0x1f7e2) if 100 <= dxy <= 105 else chr(0x1f7e1)
               dxy_comment = '안전구간 유지' if 100 <= dxy <= 105 else '구간 이탈 주의'
-              dxy_line = '{} 달러인덱스 {:5}   {}'.format(dxy_signal, dxy, dxy_comment)
+              dxy_line = '{} 달러인덱스 {} {}'.format(dxy_signal, dxy, dxy_comment)
           except Exception:
               dxy_line = '? 달러인덱스 ' + ERR
 
@@ -130,9 +125,9 @@ jobs:
               vix = round(vix_res['chart']['result'][0]['meta']['regularMarketPrice'], 1)
               vix_signal = chr(0x1f534) if vix >= 30 else (chr(0x1f7e1) if vix >= 20 else chr(0x1f7e2))
               vix_comment = '패닉 셀링 발생' if vix >= 30 else ('단기 주의' if vix >= 20 else '시장 안정')
-              vix_line = '{} VIX       {:5}   {}'.format(vix_signal, vix, vix_comment)
+              vix_line = '{} VIX {} {}'.format(vix_signal, vix, vix_comment)
           except Exception:
-              vix_line = '? VIX       ' + ERR
+              vix_line = '? VIX ' + ERR
 
           # WTI 유가
           try:
@@ -144,11 +139,11 @@ jobs:
               wti = round(wti_res['chart']['result'][0]['meta']['regularMarketPrice'], 1)
               wti_signal = chr(0x1f534) if wti >= 90 else (chr(0x1f7e1) if wti < 80 else chr(0x1f7e2))
               wti_comment = '인플레 자극 위험' if wti >= 90 else ('경기 둔화 신호' if wti < 80 else '안정구간 유지')
-              wti_line = '{} WTI유가   {:5}$  {}'.format(wti_signal, wti, wti_comment)
+              wti_line = '{} WTI유가 {}$ {}'.format(wti_signal, wti, wti_comment)
           except Exception:
-              wti_line = '? WTI유가   ' + ERR
+              wti_line = '? WTI유가 ' + ERR
 
-          msg = '```\n[{} 주요지표 {}]\n{}\n{}\n{}\n{}\n{}\n{}\n```'.format(
+          msg = '[{} 주요지표 {}]\n{}\n{}\n{}\n{}\n{}\n{}'.format(
               date_str, w_emoji,
               fx_line, fg_line,
               t10_line, dxy_line,
@@ -157,6 +152,6 @@ jobs:
 
           requests.post(
               'https://api.telegram.org/bot{}/sendMessage'.format(token),
-              json={'chat_id': chat_id, 'text': msg, 'parse_mode': 'Markdown'}
+              json={'chat_id': chat_id, 'text': msg}
           )
           PYEOF
