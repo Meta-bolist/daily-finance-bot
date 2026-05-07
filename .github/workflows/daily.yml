@@ -78,15 +78,15 @@ jobs:
               ).json()
               vix = round(vix_res['chart']['result'][0]['meta']['regularMarketPrice'], 1)
               if vix < 15:
-                  vix_emoji, vix_comment = chr(0x1f60a), '극도의 안도'
+                  vix_emoji, vix_comment = chr(0x1f603), '극도의 안도'
               elif vix < 20:
-                  vix_emoji, vix_comment = chr(0x1f610), '정상'
+                  vix_emoji, vix_comment = chr(0x1f642), '정상'
               elif vix < 30:
-                  vix_emoji, vix_comment = chr(0x1f61f), '경계 및 불안'
+                  vix_emoji, vix_comment = chr(0x1f914), '경계 및 불안'
               elif vix < 40:
                   vix_emoji, vix_comment = chr(0x1f628), '공포 및 투매'
               else:
-                  vix_emoji, vix_comment = chr(0x1f92f), '극심한 패닉'
+                  vix_emoji, vix_comment = chr(0x1f631), '극심한 패닉'
               vix_line = '{} VIX {} {}'.format(vix_emoji, vix, vix_comment)
           except Exception:
               vix_line = '? VIX ' + ERR
@@ -117,8 +117,12 @@ jobs:
                   headers=headers
               ).json()
               t10 = round(t10_res['chart']['result'][0]['meta']['regularMarketPrice'], 2)
-              t10_signal = chr(0x1f7e1) if t10 >= 4.5 else chr(0x1f7e2)
-              t10_comment = '금리 상승 압력' if t10 >= 4.5 else '안정구간 유지'
+              if t10 < 3.5:
+                  t10_signal, t10_comment = chr(0x1f7e1), '경기침체 우려'
+              elif t10 < 5.0:
+                  t10_signal, t10_comment = chr(0x1f7e2), '금리 안정'
+              else:
+                  t10_signal, t10_comment = chr(0x1f534), '금리 과열 주가 압력'
               t10_line = '{} 미국채10년 {}% {}'.format(t10_signal, t10, t10_comment)
           except Exception:
               t10_line = '? 미국채10년 ' + ERR
@@ -131,8 +135,12 @@ jobs:
                   headers=headers
               ).json()
               dxy = round(dxy_res['chart']['result'][0]['meta']['regularMarketPrice'], 1)
-              dxy_signal = chr(0x1f7e2) if 100 <= dxy <= 105 else chr(0x1f7e1)
-              dxy_comment = '안전구간 유지' if 100 <= dxy <= 105 else '구간 이탈 주의'
+              if dxy < 100:
+                  dxy_signal, dxy_comment = chr(0x1f7e1), '달러약세 신흥국 유리'
+              elif dxy <= 105:
+                  dxy_signal, dxy_comment = chr(0x1f7e2), '달러 안정'
+              else:
+                  dxy_signal, dxy_comment = chr(0x1f7e1), '달러강세 외국자금 유출'
               dxy_line = '{} 달러인덱스 {} {}'.format(dxy_signal, dxy, dxy_comment)
           except Exception:
               dxy_line = '? 달러인덱스 ' + ERR
@@ -145,8 +153,12 @@ jobs:
                   headers=headers
               ).json()
               wti = round(wti_res['chart']['result'][0]['meta']['regularMarketPrice'], 1)
-              wti_signal = chr(0x1f534) if wti >= 90 else (chr(0x1f7e1) if wti < 80 else chr(0x1f7e2))
-              wti_comment = '인플레 자극 위험' if wti >= 90 else ('경기 둔화 신호' if wti < 80 else '안정구간 유지')
+              if wti < 80:
+                  wti_signal, wti_comment = chr(0x1f7e1), '경기 둔화 신호'
+              elif wti <= 90:
+                  wti_signal, wti_comment = chr(0x1f7e2), '유가 안정'
+              else:
+                  wti_signal, wti_comment = chr(0x1f534), '인플레 자극 위험'
               wti_line = '{} WTI유가 {}$ {}'.format(wti_signal, wti, wti_comment)
           except Exception:
               wti_line = '? WTI유가 ' + ERR
