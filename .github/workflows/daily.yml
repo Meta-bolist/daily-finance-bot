@@ -59,8 +59,8 @@ jobs:
                   'extreme fear': (chr(0x1f631), '극단적공포'),
                   'fear':         (chr(0x1f630), '공포'),
                   'neutral':      (chr(0x1f610), '중립'),
-                  'greed':        (chr(0x1f974), '탐욕'),
-                  'extreme greed':(chr(0x1f911), '극단적탐욕'),
+                  'greed':        (chr(0x1f911), '탐욕'),
+                  'extreme greed':(chr(0x1f92a), '극단적탐욕'),
               }
               fg_emoji, fg_label = rating_map.get(rating, ('?', rating))
               fg_line = '{} 공포탐욕 {} {}'.format(fg_emoji, score, fg_label)
