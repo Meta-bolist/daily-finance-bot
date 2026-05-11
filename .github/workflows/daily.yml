@@ -10,7 +10,7 @@ jobs:
       - name: Send Finance Alert
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_TEST_CHAT_ID }}
         run: |
           pip install fear-greed requests yfinance -q
           python3 - << 'PYEOF'
@@ -173,18 +173,20 @@ jobs:
               per_line = '? 나스닥100 PER ' + ERR
 
           try:
-              dia = yf.Ticker('DIA')
-              div_yield = round(dia.info['dividendYield'], 2)
+              schd = yf.Ticker('SCHD')
+              raw_yield = schd.info['dividendYield']
+              print('SCHD raw dividendYield:', raw_yield)
+              div_yield = round(raw_yield, 2)
               if div_yield >= 4.0:
                   div_signal, div_comment = chr(0x1f7e2), '저평가'
-              elif div_yield >= 2.5:
+              elif div_yield >= 3.0:
                   div_signal, div_comment = chr(0x1f7e1), '적정'
               else:
                   div_signal, div_comment = chr(0x1f534), '고평가'
-              div_line = '{} 다우 배당수익률 {}% ({})'.format(div_signal, div_yield, div_comment)
+              div_line = '{} SCHD 배당수익률 {}% ({})'.format(div_signal, div_yield, div_comment)
           except Exception as e:
-              print('DIA error:', e)
-              div_line = '? 다우 배당수익률 ' + ERR
+              print('SCHD error:', e)
+              div_line = '? SCHD 배당수익률 ' + ERR
 
           msg = '[{} 주요지표 {}]\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}'.format(
               date_str, w_emoji,
