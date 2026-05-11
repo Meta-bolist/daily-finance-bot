@@ -12,11 +12,12 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          pip install fear-greed requests -q
+          pip install fear-greed requests yfinance -q
           python3 - << 'PYEOF'
           import requests
           import os
           import fear_greed
+          import yfinance as yf
           from datetime import datetime, timezone, timedelta
 
           token = os.environ['TELEGRAM_TOKEN']
@@ -143,76 +144,4 @@ jobs:
           except Exception:
               dxy_line = '? 달러인덱스 ' + ERR
 
-          # WTI 유가
-          try:
-              wti_res = requests.get(
-                  'https://query1.finance.yahoo.com/v8/finance/chart/CL%3DF'
-                  '?interval=1d&range=2d',
-                  headers=headers
-              ).json()
-              wti = round(wti_res['chart']['result'][0]['meta']['regularMarketPrice'], 1)
-              if wti < 80:
-                  wti_signal, wti_comment = chr(0x1f7e1), '경기 둔화 신호'
-              elif wti <= 90:
-                  wti_signal, wti_comment = chr(0x1f7e2), '유가 안정'
-              else:
-                  wti_signal, wti_comment = chr(0x1f534), '인플레 자극 위험'
-              wti_line = '{} WTI유가 {}$ {}'.format(wti_signal, wti, wti_comment)
-          except Exception:
-              wti_line = '? WTI유가 ' + ERR
-
-          # 나스닥100 PER (QQQ)
-          try:
-              qqq_res = requests.get(
-                  'https://query1.finance.yahoo.com/v10/finance/quoteSummary/QQQ'
-                  '?modules=summaryDetail',
-                  headers=headers
-              ).json()
-              print('QQQ raw:', str(qqq_res)[:500])
-              per = round(qqq_res['quoteSummary']['result'][0]['summaryDetail']['trailingPE']['raw'], 1)
-              avg_per = 25.0
-              diff_per = round((per - avg_per) / avg_per * 100)
-              diff_per_str = '+{}%'.format(diff_per) if diff_per > 0 else '{}%'.format(diff_per)
-              if per >= 30:
-                  per_signal, per_comment = chr(0x1f534), '고평가'
-              elif per >= 20:
-                  per_signal, per_comment = chr(0x1f7e2), '적정'
-              else:
-                  per_signal, per_comment = chr(0x1f7e1), '저평가'
-              per_line = '{} 나스닥100 PER {}배 ({} {})'.format(per_signal, per, diff_per_str, per_comment)
-          except Exception as e:
-              print('QQQ error:', e)
-              per_line = '? 나스닥100 PER ' + ERR
-
-          # 다우존스 배당수익률 (DIA)
-          try:
-              dia_res = requests.get(
-                  'https://query1.finance.yahoo.com/v10/finance/quoteSummary/DIA'
-                  '?modules=summaryDetail',
-                  headers=headers
-              ).json()
-              print('DIA raw:', str(dia_res)[:500])
-              div_yield = round(dia_res['quoteSummary']['result'][0]['summaryDetail']['dividendYield']['raw'] * 100, 2)
-              if div_yield >= 4.0:
-                  div_signal, div_comment = chr(0x1f7e2), '저평가'
-              elif div_yield >= 2.5:
-                  div_signal, div_comment = chr(0x1f7e1), '적정'
-              else:
-                  div_signal, div_comment = chr(0x1f534), '고평가'
-              div_line = '{} 다우 배당수익률 {}% ({})'.format(div_signal, div_yield, div_comment)
-          except Exception as e:
-              print('DIA error:', e)
-              div_line = '? 다우 배당수익률 ' + ERR
-
-          msg = '[{} 주요지표 {}]\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}'.format(
-              date_str, w_emoji,
-              fx_line, fg_line, vix_line,
-              t10_line, dxy_line, wti_line,
-              per_line, div_line
-          )
-
-          requests.post(
-              'https://api.telegram.org/bot{}/sendMessage'.format(token),
-              json={'chat_id': chat_id, 'text': msg}
-          )
-          PYEOF
+          #
