@@ -21,7 +21,7 @@ jobs:
           from datetime import datetime, timezone, timedelta
 
           token = os.environ['TELEGRAM_TOKEN']
-          chat_id = os.environ['TELEGRAM_CHAT_ID']
+          chat_id = os.environ['TELEGRAM_TEST_CHAT_ID']
 
           kst = datetime.now(timezone(timedelta(hours=9)))
           weekday_kr = ['월', '화', '수', '목', '금', '토', '일']
