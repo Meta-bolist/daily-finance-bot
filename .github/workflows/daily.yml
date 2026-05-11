@@ -174,7 +174,7 @@ jobs:
 
           try:
               dia = yf.Ticker('DIA')
-              div_yield = round(dia.info['dividendYield'] * 100, 2)
+              div_yield = round(dia.info['dividendYield'], 2)
               if div_yield >= 4.0:
                   div_signal, div_comment = chr(0x1f7e2), '저평가'
               elif div_yield >= 2.5:
