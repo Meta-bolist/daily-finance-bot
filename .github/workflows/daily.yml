@@ -10,7 +10,7 @@ jobs:
       - name: Send Finance Alert
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_TEST_CHAT_ID }}
         run: |
           pip install fear-greed requests yfinance -q
           python3 - << 'PYEOF'
@@ -21,7 +21,7 @@ jobs:
           from datetime import datetime, timezone, timedelta
 
           token = os.environ['TELEGRAM_TOKEN']
-          chat_id = os.environ['TELEGRAM_TEST_CHAT_ID']
+          chat_id = os.environ['TELEGRAM_CHAT_ID']
 
           kst = datetime.now(timezone(timedelta(hours=9)))
           weekday_kr = ['월', '화', '수', '목', '금', '토', '일']
