@@ -161,10 +161,50 @@ jobs:
           except Exception:
               wti_line = '? WTI유가 ' + ERR
 
-          msg = '[{} 주요지표 {}]\n{}\n{}\n{}\n{}\n{}\n{}'.format(
+          # 나스닥100 PER (QQQ)
+          try:
+              qqq_res = requests.get(
+                  'https://query1.finance.yahoo.com/v10/finance/quoteSummary/QQQ'
+                  '?modules=summaryDetail',
+                  headers=headers
+              ).json()
+              per = round(qqq_res['quoteSummary']['result'][0]['summaryDetail']['trailingPE']['raw'], 1)
+              avg_per = 25.0
+              diff_per = round((per - avg_per) / avg_per * 100)
+              diff_per_str = '+{}%'.format(diff_per) if diff_per > 0 else '{}%'.format(diff_per)
+              if per >= 30:
+                  per_signal, per_comment = chr(0x1f534), '고평가'
+              elif per >= 20:
+                  per_signal, per_comment = chr(0x1f7e2), '적정'
+              else:
+                  per_signal, per_comment = chr(0x1f7e1), '저평가'
+              per_line = '{} 나스닥100 PER {}배 ({} {})'.format(per_signal, per, diff_per_str, per_comment)
+          except Exception:
+              per_line = '? 나스닥100 PER ' + ERR
+
+          # 다우존스 배당수익률 (DIA)
+          try:
+              dia_res = requests.get(
+                  'https://query1.finance.yahoo.com/v10/finance/quoteSummary/DIA'
+                  '?modules=summaryDetail',
+                  headers=headers
+              ).json()
+              div_yield = round(dia_res['quoteSummary']['result'][0]['summaryDetail']['dividendYield']['raw'] * 100, 2)
+              if div_yield >= 4.0:
+                  div_signal, div_comment = chr(0x1f7e2), '저평가'
+              elif div_yield >= 2.5:
+                  div_signal, div_comment = chr(0x1f7e1), '적정'
+              else:
+                  div_signal, div_comment = chr(0x1f534), '고평가'
+              div_line = '{} 다우 배당수익률 {}% ({})'.format(div_signal, div_yield, div_comment)
+          except Exception:
+              div_line = '? 다우 배당수익률 ' + ERR
+
+          msg = '[{} 주요지표 {}]\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}'.format(
               date_str, w_emoji,
               fx_line, fg_line, vix_line,
-              t10_line, dxy_line, wti_line
+              t10_line, dxy_line, wti_line,
+              per_line, div_line
           )
 
           requests.post(
