@@ -3,19 +3,27 @@ name: Daily Finance Alert
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   send-alert:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
       - name: Send Finance Alert
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_TEST_CHAT_ID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           pip install fear-greed requests yfinance -q
           python3 - << 'PYEOF'
           import requests
           import os
+          import json
           import fear_greed
           import yfinance as yf
           from datetime import datetime, timezone, timedelta
@@ -29,6 +37,17 @@ jobs:
           headers = {'User-Agent': 'Mozilla/5.0'}
           ERR = '불러오기 실패'
 
+          # 전일값 저장소 (확장 가능한 구조)
+          data_file = 'data/prev.json'
+          os.makedirs('data', exist_ok=True)
+          try:
+              with open(data_file, 'r') as f:
+                  prev = json.load(f)
+          except Exception:
+              prev = {}
+          today_data = {}
+
+          # 날씨 (김포)
           try:
               weather_res = requests.get(
                   'https://api.open-meteo.com/v1/forecast'
@@ -50,6 +69,7 @@ jobs:
           except Exception:
               w_emoji = '?'
 
+          # 공포탐욕지수
           try:
               data = fear_greed.get()
               score = round(data['score'], 1)
@@ -66,6 +86,7 @@ jobs:
           except Exception:
               fg_line = '? 공포탐욕 ' + ERR
 
+          # VIX
           try:
               vix_res = requests.get(
                   'https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX'
@@ -87,31 +108,31 @@ jobs:
           except Exception:
               vix_line = '? VIX ' + ERR
 
+          # 환율
           try:
               fx_res = requests.get(
                   'https://query1.finance.yahoo.com/v8/finance/chart/USDKRW=X'
-                  '?interval=1d&range=5d',
+                  '?interval=1d&range=2d',
                   headers=headers
               ).json()
               closes = fx_res['chart']['result'][0]['indicators']['quote'][0]['close']
-              timestamps = fx_res['chart']['result'][0]['timestamp']
-              closes_with_time = [(timestamps[i], closes[i]) for i in range(len(closes)) if closes[i] is not None]
-              print('FX data points:')
-              for ts, val in closes_with_time:
-                  dt = datetime.fromtimestamp(ts, tz=timezone.utc)
-                  print('  {} -> {}'.format(dt.strftime('%Y-%m-%d %H:%M'), round(val)))
-              closes_clean = [round(c) for _, c in closes_with_time]
-              krw_today = closes_clean[-1]
-              krw_yesterday = closes_clean[-2]
-              print('today: {} yesterday: {} diff: {}'.format(krw_today, krw_yesterday, krw_today - krw_yesterday))
-              fx_arrow = chr(0x1f4c8) if krw_today > krw_yesterday else chr(0x1f4c9)
-              diff = krw_today - krw_yesterday
-              diff_str = '+{}원'.format(diff) if diff > 0 else '{}원'.format(diff)
-              fx_line = '{} 환율 {:,}원 ({})'.format(fx_arrow, krw_today, diff_str)
+              closes = [c for c in closes if c is not None]
+              krw_today = round(closes[-1])
+              today_data['krw'] = krw_today
+
+              krw_yesterday = prev.get('krw')
+              if krw_yesterday:
+                  diff = krw_today - krw_yesterday
+                  diff_str = '+{}원'.format(diff) if diff > 0 else '{}원'.format(diff)
+                  fx_arrow = chr(0x1f4c8) if diff > 0 else chr(0x1f4c9)
+                  fx_line = '{} 환율 {:,}원 ({})'.format(fx_arrow, krw_today, diff_str)
+              else:
+                  fx_line = '- 환율 {:,}원'.format(krw_today)
           except Exception as e:
               print('FX error:', e)
               fx_line = '? 환율 ' + ERR
 
+          # 미국채 10년물
           try:
               t10_res = requests.get(
                   'https://query1.finance.yahoo.com/v8/finance/chart/%5ETNX'
@@ -129,6 +150,7 @@ jobs:
           except Exception:
               t10_line = '? \ubbf8\uad6d\uccb410\ub144 ' + ERR
 
+          # 달러 인덱스
           try:
               dxy_res = requests.get(
                   'https://query1.finance.yahoo.com/v8/finance/chart/DX-Y.NYB'
@@ -146,6 +168,7 @@ jobs:
           except Exception:
               dxy_line = '? \ub2ec\ub7ec\uc778\ub371\uc2a4 ' + ERR
 
+          # WTI 유가
           try:
               wti_res = requests.get(
                   'https://query1.finance.yahoo.com/v8/finance/chart/CL%3DF'
@@ -163,6 +186,7 @@ jobs:
           except Exception:
               wti_line = '? WTI\uc720\uac00 ' + ERR
 
+          # 나스닥100 PER
           try:
               qqq = yf.Ticker('QQQ')
               per = round(qqq.info['trailingPE'], 1)
@@ -180,6 +204,7 @@ jobs:
               print('QQQ error:', e)
               per_line = '? \ub098\uc2a4\ub2e5100 PER ' + ERR
 
+          # 다우배당100
           try:
               schd = yf.Ticker('SCHD')
               div_yield = round(schd.info['dividendYield'], 2)
@@ -194,6 +219,13 @@ jobs:
               print('SCHD error:', e)
               div_line = '? \ub2e4\uc6b0\ubc30\ub2f9100 ' + ERR
 
+          # 오늘 데이터 저장
+          try:
+              with open(data_file, 'w') as f:
+                  json.dump(today_data, f)
+          except Exception as e:
+              print('save error:', e)
+
           msg = '[{} \uc8fc\uc694\uc9c0\ud45c {}]\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}'.format(
               date_str, w_emoji,
               fx_line, fg_line, vix_line,
@@ -206,3 +238,11 @@ jobs:
               json={'chat_id': chat_id, 'text': msg}
           )
           PYEOF
+
+      - name: Commit data
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add data/prev.json
+          git diff --staged --quiet || git commit -m "update prev data"
+          git push
