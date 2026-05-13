@@ -16,7 +16,7 @@ jobs:
       - name: Send Finance Alert
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TG_CHAT_ID: ${{ secrets.TELEGRAM_TEST_CHAT_ID }}
+          TG_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KRX_USER: ${{ secrets.KRX_ID }}
           KRX_PASS: ${{ secrets.KRX_PW }}
@@ -63,12 +63,12 @@ jobs:
               elif diff < 0:
                   return ' [{}{}]'.format(diff, unit)
               else:
-                  return ' [0{}]'.format(unit)
+                  return ' [+0{}]'.format(unit)
 
           def direction_emoji(val, prev_val):
               if prev_val is None:
                   return '-'
-              return chr(0x1f4c8) if val > prev_val else chr(0x1f4c9)
+              return chr(0x1f4c8) if val >= prev_val else chr(0x1f4c9)
 
           # 날씨
           try:
@@ -106,8 +106,13 @@ jobs:
               krw_yesterday = prev.get('krw')
               if krw_yesterday:
                   diff = krw_today - krw_yesterday
-                  diff_str = '+{}\u20a9'.format(diff) if diff > 0 else '{}\u20a9'.format(diff)
-                  fx_arrow = chr(0x1f4c8) if diff > 0 else chr(0x1f4c9)
+                  if diff > 0:
+                      diff_str = '+{}\u20a9'.format(diff)
+                  elif diff < 0:
+                      diff_str = '{}\u20a9'.format(diff)
+                  else:
+                      diff_str = '+0\u20a9'
+                  fx_arrow = chr(0x1f4c8) if diff >= 0 else chr(0x1f4c9)
                   fx_line = '{} 환율: {:,}\u20a9 [{}]'.format(fx_arrow, krw_today, diff_str)
               else:
                   fx_line = '- 환율: {:,}\u20a9'.format(krw_today)
