@@ -40,6 +40,7 @@ jobs:
           weekday_kr = ['월', '화', '수', '목', '금', '토', '일']
           date_str = kst.strftime('%Y/%m/%d') + '(' + weekday_kr[kst.weekday()] + ')'
           today_str = kst.strftime('%Y%m%d')
+          prev5_str = (kst - timedelta(days=5)).strftime('%Y%m%d')
           headers = {'User-Agent': 'Mozilla/5.0'}
           ERR = '불러오기 실패'
 
@@ -240,23 +241,29 @@ jobs:
               div_line = '? 다우배당100: ' + ERR
 
           try:
-              df_pbr = stock.get_index_fundamental(today_str, today_str, '1028')
+              df_pbr = stock.get_index_fundamental(prev5_str, today_str, '1028')
+              df_pbr = df_pbr[df_pbr['PBR'] > 0]
               pbr = round(float(df_pbr['PBR'].iloc[-1]), 2)
               today_data['kospi_pbr'] = pbr
               diff_pbr = fmt_diff(pbr, prev.get('kospi_pbr'), '', 2)
+              avg_pbr = 1.0
+              diff_pbr_pct = round((pbr - avg_pbr) / avg_pbr * 100)
+              diff_pbr_pct_str = '+{}%'.format(diff_pbr_pct) if diff_pbr_pct > 0 else '{}%'.format(diff_pbr_pct)
               if pbr < 1.0:
                   pbr_signal, pbr_comment = chr(0x1f7e2), '저평가'
               elif pbr <= 1.3:
                   pbr_signal, pbr_comment = chr(0x1f7e1), '적정'
               else:
                   pbr_signal, pbr_comment = chr(0x1f534), '고평가'
-              pbr_line = '{} KOSPI PBR: {}배{} {}'.format(pbr_signal, pbr, diff_pbr, pbr_comment)
+              pbr_line = '{} KOSPI PBR: {}배{} {} {}'.format(pbr_signal, pbr, diff_pbr, diff_pbr_pct_str, pbr_comment)
           except Exception as e:
               print('KOSPI PBR error:', e)
               pbr_line = '? KOSPI PBR: ' + ERR
 
           try:
               df_adr = stock.get_market_price_change(today_str, today_str, market='KOSPI')
+              if len(df_adr) == 0:
+                  df_adr = stock.get_market_price_change(prev5_str, today_str, market='KOSPI')
               up = len(df_adr[df_adr['등락률'] > 0])
               down = len(df_adr[df_adr['등락률'] < 0])
               adr = round(up / down * 100, 1) if down > 0 else 0
