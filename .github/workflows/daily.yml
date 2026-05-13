@@ -16,7 +16,7 @@ jobs:
       - name: Send Finance Alert
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_TEST_CHAT_ID }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           pip install fear-greed requests yfinance -q
@@ -79,9 +79,9 @@ jobs:
                   'extreme greed':(chr(0x1f92f), '극단적탐욕'),
               }
               fg_emoji, fg_label = rating_map.get(rating, ('?', rating))
-              fg_line = '{} 공포탐욕 {} {}'.format(fg_emoji, score, fg_label)
+              fg_line = '{} 공포탐욕: {} ({})'.format(fg_emoji, score, fg_label)
           except Exception:
-              fg_line = '? 공포탐욕 ' + ERR
+              fg_line = '? 공포탐욕: ' + ERR
 
           try:
               vix_res = requests.get(
@@ -100,9 +100,9 @@ jobs:
                   vix_emoji, vix_comment = chr(0x1f628), '공포 및 투매'
               else:
                   vix_emoji, vix_comment = chr(0x1f631), '극심한 패닉'
-              vix_line = '{} VIX {} {}'.format(vix_emoji, vix, vix_comment)
+              vix_line = '{} VIX: {} ({})'.format(vix_emoji, vix, vix_comment)
           except Exception:
-              vix_line = '? VIX ' + ERR
+              vix_line = '? VIX: ' + ERR
 
           try:
               fx_res = requests.get(
@@ -120,12 +120,12 @@ jobs:
                   diff = krw_today - krw_yesterday
                   diff_str = '+{}\u20a9'.format(diff) if diff > 0 else '{}\u20a9'.format(diff)
                   fx_arrow = chr(0x1f4c8) if diff > 0 else chr(0x1f4c9)
-                  fx_line = '{} \ud658\uc728 {:,}\u20a9 ({})'.format(fx_arrow, krw_today, diff_str)
+                  fx_line = '{} 환율: {:,}\u20a9 ({})'.format(fx_arrow, krw_today, diff_str)
               else:
-                  fx_line = '- \ud658\uc728 {:,}\u20a9'.format(krw_today)
+                  fx_line = '- 환율: {:,}\u20a9'.format(krw_today)
           except Exception as e:
               print('FX error:', e)
-              fx_line = '? \ud658\uc728 ' + ERR
+              fx_line = '? 환율: ' + ERR
 
           try:
               t10_res = requests.get(
@@ -135,14 +135,14 @@ jobs:
               ).json()
               t10 = round(t10_res['chart']['result'][0]['meta']['regularMarketPrice'], 2)
               if t10 < 3.5:
-                  t10_signal, t10_comment = chr(0x1f7e1), '\uae08\ub9ac \ud558\ub77d \u2192 \uacbd\uae30\uce68\uccb4 \uc6b0\ub824'
+                  t10_signal, t10_comment = chr(0x1f7e1), '금리 하락 \u2192 경기침체 우려'
               elif t10 < 5.0:
-                  t10_signal, t10_comment = chr(0x1f7e2), '\uae08\ub9ac \uc548\uc815'
+                  t10_signal, t10_comment = chr(0x1f7e2), '금리 안정'
               else:
-                  t10_signal, t10_comment = chr(0x1f534), '\uae08\ub9ac \uacfc\uc5f4 \u2192 \uc8fc\uac00 \ud558\ub77d \uc555\ub825'
-              t10_line = '{} \ubbf8\uad6d\uccb410\ub144 {}% {}'.format(t10_signal, t10, t10_comment)
+                  t10_signal, t10_comment = chr(0x1f534), '금리 과열 \u2192 주가 하락 압력'
+              t10_line = '{} 미국채10년: {}% ({})'.format(t10_signal, t10, t10_comment)
           except Exception:
-              t10_line = '? \ubbf8\uad6d\uccb410\ub144 ' + ERR
+              t10_line = '? 미국채10년: ' + ERR
 
           try:
               dxy_res = requests.get(
@@ -152,14 +152,14 @@ jobs:
               ).json()
               dxy = round(dxy_res['chart']['result'][0]['meta']['regularMarketPrice'], 1)
               if dxy < 100:
-                  dxy_signal, dxy_comment = chr(0x1f7e1), '\ub2ec\ub7ec\uc57d\uc138 \u2192 \uc2e0\ud765\uad6d \uc790\uae08\uc720\uc785'
+                  dxy_signal, dxy_comment = chr(0x1f7e1), '달러약세 \u2192 신흥국 자금유입'
               elif dxy <= 105:
-                  dxy_signal, dxy_comment = chr(0x1f7e2), '\ub2ec\ub7ec \uc548\uc815'
+                  dxy_signal, dxy_comment = chr(0x1f7e2), '달러 안정'
               else:
-                  dxy_signal, dxy_comment = chr(0x1f7e1), '\ub2ec\ub7ec\uac15\uc138 \u2192 \uc2e0\ud765\uad6d \uc790\uae08\uc720\ucd9c'
-              dxy_line = '{} \ub2ec\ub7ec\uc778\ub371\uc2a4 {} {}'.format(dxy_signal, dxy, dxy_comment)
+                  dxy_signal, dxy_comment = chr(0x1f7e1), '달러강세 \u2192 신흥국 자금유출'
+              dxy_line = '{} 달러인덱스: {} ({})'.format(dxy_signal, dxy, dxy_comment)
           except Exception:
-              dxy_line = '? \ub2ec\ub7ec\uc778\ub371\uc2a4 ' + ERR
+              dxy_line = '? 달러인덱스: ' + ERR
 
           try:
               wti_res = requests.get(
@@ -169,14 +169,14 @@ jobs:
               ).json()
               wti = round(wti_res['chart']['result'][0]['meta']['regularMarketPrice'], 1)
               if wti < 80:
-                  wti_signal, wti_comment = chr(0x1f7e1), '\uc720\uac00 \ud558\ub77d \u2192 \uacbd\uae30 \ub465\ud654 \uc2e0\ud638'
+                  wti_signal, wti_comment = chr(0x1f7e1), '유가 하락 \u2192 경기 둔화 신호'
               elif wti <= 90:
-                  wti_signal, wti_comment = chr(0x1f7e2), '\uc720\uac00 \uc548\uc815'
+                  wti_signal, wti_comment = chr(0x1f7e2), '유가 안정'
               else:
-                  wti_signal, wti_comment = chr(0x1f534), '\uc720\uac00 \uae09\ub4f1 \u2192 \uc778\ud50c\ub808 \uc790\uadf9 \uc704\ud5d8'
-              wti_line = '{} WTI\uc720\uac00 {}$ {}'.format(wti_signal, wti, wti_comment)
+                  wti_signal, wti_comment = chr(0x1f534), '유가 급등 \u2192 인플레 자극 위험'
+              wti_line = '{} WTI유가: {}$ ({})'.format(wti_signal, wti, wti_comment)
           except Exception:
-              wti_line = '? WTI\uc720\uac00 ' + ERR
+              wti_line = '? WTI유가: ' + ERR
 
           try:
               qqq = yf.Ticker('QQQ')
@@ -185,29 +185,29 @@ jobs:
               diff_per = round((per - avg_per) / avg_per * 100)
               diff_per_str = '+{}%'.format(diff_per) if diff_per > 0 else '{}%'.format(diff_per)
               if per >= 30:
-                  per_signal, per_comment = chr(0x1f534), '\uace0\ud3c9\uac00'
+                  per_signal, per_comment = chr(0x1f534), '고평가'
               elif per >= 20:
-                  per_signal, per_comment = chr(0x1f7e2), '\uc801\uc815'
+                  per_signal, per_comment = chr(0x1f7e2), '적정'
               else:
-                  per_signal, per_comment = chr(0x1f7e1), '\uc800\ud3c9\uac00'
-              per_line = '{} \ub098\uc2a4\ub2e5100 PER {}\ubc30 ({} {})'.format(per_signal, per, diff_per_str, per_comment)
+                  per_signal, per_comment = chr(0x1f7e1), '저평가'
+              per_line = '{} 나스닥100 PER: {}배 ({} {})'.format(per_signal, per, diff_per_str, per_comment)
           except Exception as e:
               print('QQQ error:', e)
-              per_line = '? \ub098\uc2a4\ub2e5100 PER ' + ERR
+              per_line = '? 나스닥100 PER: ' + ERR
 
           try:
               schd = yf.Ticker('SCHD')
               div_yield = round(schd.info['dividendYield'], 2)
               if div_yield >= 4.0:
-                  div_signal, div_comment = chr(0x1f7e2), '\uc800\ud3c9\uac00'
+                  div_signal, div_comment = chr(0x1f7e2), '저평가'
               elif div_yield >= 2.5:
-                  div_signal, div_comment = chr(0x1f7e1), '\uc801\uc815'
+                  div_signal, div_comment = chr(0x1f7e1), '적정'
               else:
-                  div_signal, div_comment = chr(0x1f534), '\uace0\ud3c9\uac00'
-              div_line = '{} \ub2e4\uc6b0\ubc30\ub2f9100 {}% ({})'.format(div_signal, div_yield, div_comment)
+                  div_signal, div_comment = chr(0x1f534), '고평가'
+              div_line = '{} 다우배당100: {}% ({})'.format(div_signal, div_yield, div_comment)
           except Exception as e:
               print('SCHD error:', e)
-              div_line = '? \ub2e4\uc6b0\ubc30\ub2f9100 ' + ERR
+              div_line = '? 다우배당100: ' + ERR
 
           try:
               with open(data_file, 'w') as f:
@@ -215,7 +215,7 @@ jobs:
           except Exception as e:
               print('save error:', e)
 
-          msg = '[{} \uc8fc\uc694\uc9c0\ud45c {}]\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}'.format(
+          msg = '[{} 주요지표 {}]\n{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}'.format(
               date_str, w_emoji,
               fx_line, fg_line, vix_line,
               t10_line, dxy_line, wti_line,
