@@ -15,9 +15,11 @@ jobs:
 
       - name: Send Finance Alert
         env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_TEST_CHAT_ID }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TELEGRAM_TEST_CHAT_ID }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KRX_USER: ${{ secrets.KRX_ID }}
+          KRX_PASS: ${{ secrets.KRX_PW }}
         run: |
           pip install fear-greed requests yfinance pykrx -q
           python3 - << 'PYEOF'
@@ -29,8 +31,10 @@ jobs:
           from pykrx import stock
           from datetime import datetime, timezone, timedelta
 
-          token = os.environ['TELEGRAM_TOKEN']
-          chat_id = os.environ['TELEGRAM_CHAT_ID']
+          token = os.environ['TG_TOKEN']
+          chat_id = os.environ['TG_CHAT_ID']
+          os.environ['KRX_ID'] = os.environ['KRX_USER']
+          os.environ['KRX_PW'] = os.environ['KRX_PASS']
 
           kst = datetime.now(timezone(timedelta(hours=9)))
           weekday_kr = ['월', '화', '수', '목', '금', '토', '일']
@@ -59,7 +63,6 @@ jobs:
               else:
                   return ' [0{}]'.format(unit)
 
-          # 날씨 (김포)
           try:
               weather_res = requests.get(
                   'https://api.open-meteo.com/v1/forecast'
@@ -81,7 +84,6 @@ jobs:
           except Exception:
               w_emoji = '?'
 
-          # 환율
           try:
               fx_res = requests.get(
                   'https://query1.finance.yahoo.com/v8/finance/chart/USDKRW=X'
@@ -104,7 +106,6 @@ jobs:
               print('FX error:', e)
               fx_line = '? 환율: ' + ERR
 
-          # 미국채 10년물
           try:
               t10_res = requests.get(
                   'https://query1.finance.yahoo.com/v8/finance/chart/%5ETNX'
@@ -124,7 +125,6 @@ jobs:
           except Exception:
               t10_line = '? 미국채10년: ' + ERR
 
-          # 달러 인덱스
           try:
               dxy_res = requests.get(
                   'https://query1.finance.yahoo.com/v8/finance/chart/DX-Y.NYB'
@@ -144,7 +144,6 @@ jobs:
           except Exception:
               dxy_line = '? 달러인덱스: ' + ERR
 
-          # WTI 유가
           try:
               wti_res = requests.get(
                   'https://query1.finance.yahoo.com/v8/finance/chart/CL%3DF'
@@ -164,7 +163,6 @@ jobs:
           except Exception:
               wti_line = '? WTI유가: ' + ERR
 
-          # 공포탐욕지수
           try:
               data = fear_greed.get()
               score = round(data['score'], 1)
@@ -183,7 +181,6 @@ jobs:
           except Exception:
               fg_line = '? 공포탐욕: ' + ERR
 
-          # VIX
           try:
               vix_res = requests.get(
                   'https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX'
@@ -207,7 +204,6 @@ jobs:
           except Exception:
               vix_line = '? VIX: ' + ERR
 
-          # 나스닥100 PER
           try:
               qqq = yf.Ticker('QQQ')
               per = round(qqq.info['trailingPE'], 1)
@@ -227,7 +223,6 @@ jobs:
               print('QQQ error:', e)
               per_line = '? 나스닥100 PER: ' + ERR
 
-          # 다우배당100
           try:
               schd = yf.Ticker('SCHD')
               div_yield = round(schd.info['dividendYield'], 2)
@@ -244,7 +239,6 @@ jobs:
               print('SCHD error:', e)
               div_line = '? 다우배당100: ' + ERR
 
-          # KOSPI PBR
           try:
               df_pbr = stock.get_index_fundamental(today_str, today_str, '1028')
               pbr = round(float(df_pbr['PBR'].iloc[-1]), 2)
@@ -261,7 +255,6 @@ jobs:
               print('KOSPI PBR error:', e)
               pbr_line = '? KOSPI PBR: ' + ERR
 
-          # KOSPI ADR
           try:
               df_adr = stock.get_market_price_change(today_str, today_str, market='KOSPI')
               up = len(df_adr[df_adr['등락률'] > 0])
