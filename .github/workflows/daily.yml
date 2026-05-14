@@ -22,7 +22,9 @@ jobs:
           KRX_PASS: ${{ secrets.KRX_PW }}
         run: |
           pip install fear-greed requests yfinance pykrx -q
-          python3 - << 'PYEOF'
+
+          cat > /tmp/finance.py << 'PYEOF'
+          # -*- coding: utf-8 -*-
           import requests
           import os
           import json
@@ -54,6 +56,12 @@ jobs:
               prev = {}
           today_data = {}
 
+          ICE  = '🧊'
+          OK   = '✅'
+          WARN = '⚠️'
+          HOT  = '🚨'
+          FIRE = '🔥'
+
           def fmt_diff(val, prev_val, unit='', decimal=1):
               if prev_val is None:
                   return ''
@@ -68,19 +76,13 @@ jobs:
           def direction_emoji(val, prev_val):
               if prev_val is None:
                   return '-'
-              return chr(0x1f4c8) if val >= prev_val else chr(0x1f4c9)
+              return '📈' if val >= prev_val else '📉'
 
           def grade(val, thresholds, emojis, comments):
               for i, t in enumerate(thresholds):
                   if val < t:
                       return emojis[i], comments[i]
               return emojis[-1], comments[-1]
-
-          ICE  = chr(0x1f9ca)
-          OK   = '\u2705'
-          WARN = '\u26a0\ufe0f'
-          HOT  = '\U0001f6a8'
-          FIRE = '\U0001f525'
 
           # 날씨
           try:
@@ -90,22 +92,17 @@ jobs:
                   '&daily=weathercode&timezone=Asia/Seoul&forecast_days=1'
               ).json()
               wcode = weather_res['daily']['weathercode'][0]
-              weather_map = {
-                  0: chr(0x2600)+chr(0xfe0f),
-                  1: chr(0x1f324)+chr(0xfe0f),
-                  2: chr(0x1f324)+chr(0xfe0f),
-                  3: chr(0x2601)+chr(0xfe0f)
-              }
+              weather_map = {0: '☀️', 1: '🌤️', 2: '🌤️', 3: '☁️'}
               if wcode in weather_map:
                   w_emoji = weather_map[wcode]
               elif wcode in [51,53,55,61,63,65,80,81,82]:
-                  w_emoji = chr(0x1f327)+chr(0xfe0f)
+                  w_emoji = '🌧️'
               elif wcode in [71,73,75,77,85,86]:
-                  w_emoji = chr(0x1f328)+chr(0xfe0f)
+                  w_emoji = '🌨️'
               elif wcode in [95,96,99]:
-                  w_emoji = chr(0x26c8)+chr(0xfe0f)
+                  w_emoji = '⛈️'
               else:
-                  w_emoji = chr(0x1f32b)+chr(0xfe0f)
+                  w_emoji = '🌫️'
           except Exception:
               w_emoji = '?'
 
@@ -124,18 +121,18 @@ jobs:
               if krw_yesterday:
                   diff = krw_today - int(krw_yesterday)
                   if diff > 0:
-                      diff_str = '+{}\u20a9'.format(diff)
+                      diff_str = '+{}₩'.format(diff)
                   elif diff < 0:
-                      diff_str = '{}\u20a9'.format(diff)
+                      diff_str = '{}₩'.format(diff)
                   else:
-                      diff_str = '+0\u20a9'
-                  fx_arrow = chr(0x1f4c8) if diff >= 0 else chr(0x1f4c9)
-                  fx_line = '{} \ud658\uc728: {:,}\u20a9 [{}]'.format(fx_arrow, krw_today, diff_str)
+                      diff_str = '+0₩'
+                  fx_arrow = '📈' if diff >= 0 else '📉'
+                  fx_line = '{} 환율: {:,}₩ [{}]'.format(fx_arrow, krw_today, diff_str)
               else:
-                  fx_line = '- \ud658\uc728: {:,}\u20a9'.format(krw_today)
+                  fx_line = '- 환율: {:,}₩'.format(krw_today)
           except Exception as e:
               print('FX error:', e)
-              fx_line = '? \ud658\uc728: ' + ERR
+              fx_line = '? 환율: ' + ERR
 
           # 달러인덱스
           try:
@@ -149,15 +146,15 @@ jobs:
               diff_dxy = fmt_diff(dxy, prev.get('dxy'), '', 1)
               dxy_arrow = direction_emoji(dxy, prev.get('dxy'))
               if dxy < 100:
-                  dxy_comment = '\ub2ec\ub7ec\uc57d\uc138'
+                  dxy_comment = '달러약세'
               elif dxy <= 105:
-                  dxy_comment = '\ub2ec\ub7ec\uc548\uc815'
+                  dxy_comment = '달러안정'
               else:
-                  dxy_comment = '\ub2ec\ub7ec\uac15\uc138'
-              dxy_line = '{} \ub2ec\ub7ec\uc778\ub371\uc2a4: {}{} {}'.format(dxy_arrow, dxy, diff_dxy, dxy_comment)
+                  dxy_comment = '달러강세'
+              dxy_line = '{} 달러인덱스: {}{} {}'.format(dxy_arrow, dxy, diff_dxy, dxy_comment)
           except Exception as e:
               print('DXY error:', e)
-              dxy_line = '? \ub2ec\ub7ec\uc778\ub371\uc2a4: ' + ERR
+              dxy_line = '? 달러인덱스: ' + ERR
 
           # WTI 유가
           try:
@@ -171,15 +168,15 @@ jobs:
               diff_wti = fmt_diff(wti, prev.get('wti'), '$', 1)
               wti_arrow = direction_emoji(wti, prev.get('wti'))
               if wti < 80:
-                  wti_comment = '\uc720\uac00 \uc800\uac00'
+                  wti_comment = '유가 저가'
               elif wti <= 90:
-                  wti_comment = '\uc720\uac00 \uc548\uc815'
+                  wti_comment = '유가 안정'
               else:
-                  wti_comment = '\uc720\uac00 \uace0\uac00'
-              wti_line = '{} WTI\uc720\uac00: {}${} {}'.format(wti_arrow, wti, diff_wti, wti_comment)
+                  wti_comment = '유가 고가'
+              wti_line = '{} WTI유가: {}${} {}'.format(wti_arrow, wti, diff_wti, wti_comment)
           except Exception as e:
               print('WTI error:', e)
-              wti_line = '? WTI\uc720\uac00: ' + ERR
+              wti_line = '? WTI유가: ' + ERR
 
           # 공포탐욕
           try:
@@ -187,19 +184,19 @@ jobs:
               score = round(data['score'], 1)
               rating = data['rating'].lower()
               rating_map = {
-                  'extreme fear': (chr(0x1f631), '\uadf9\ub2e8\uc801\uacf5\ud3ec'),
-                  'fear':         (chr(0x1f630), '\uacf5\ud3ec'),
-                  'neutral':      (chr(0x1f610), '\uc911\ub9bd'),
-                  'greed':        (chr(0x1f911), '\ud0d0\uc695'),
-                  'extreme greed':(chr(0x1f92f), '\uadf9\ub2e8\uc801\ud0d0\uc695'),
+                  'extreme fear': ('😱', '극단적공포'),
+                  'fear':         ('😰', '공포'),
+                  'neutral':      ('😐', '중립'),
+                  'greed':        ('🤑', '탐욕'),
+                  'extreme greed':('🤯', '극단적탐욕'),
               }
               fg_emoji, fg_label = rating_map.get(rating, ('?', rating))
               today_data['fg'] = score
               diff_fg = fmt_diff(score, prev.get('fg'), '', 1)
-              fg_line = '{} \uacf5\ud3ec\ud0d0\uc695: {}{} {}'.format(fg_emoji, score, diff_fg, fg_label)
+              fg_line = '{} 공포탐욕: {}{} {}'.format(fg_emoji, score, diff_fg, fg_label)
           except Exception as e:
               print('FG error:', e)
-              fg_line = '? \uacf5\ud3ec\ud0d0\uc695: ' + ERR
+              fg_line = '? 공포탐욕: ' + ERR
 
           # VIX
           try:
@@ -212,15 +209,15 @@ jobs:
               today_data['vix'] = vix
               diff_vix = fmt_diff(vix, prev.get('vix'), '', 1)
               if vix < 15:
-                  vix_emoji, vix_comment = chr(0x1f603), '\uadf9\ub3c4\uc758 \uc548\ub3c4'
+                  vix_emoji, vix_comment = '😃', '극도의 안도'
               elif vix < 20:
-                  vix_emoji, vix_comment = chr(0x1f642), '\uc815\uc0c1'
+                  vix_emoji, vix_comment = '🙂', '정상'
               elif vix < 30:
-                  vix_emoji, vix_comment = chr(0x1f914), '\uacbd\uacc4 \ubc0f \ubd88\uc548'
+                  vix_emoji, vix_comment = '🤔', '경계 및 불안'
               elif vix < 40:
-                  vix_emoji, vix_comment = chr(0x1f628), '\uacf5\ud3ec \ubc0f \ud22c\ub9e4'
+                  vix_emoji, vix_comment = '😨', '공포 및 투매'
               else:
-                  vix_emoji, vix_comment = chr(0x1f631), '\uadf9\uc2ec\ud55c \ud328\ub2c9'
+                  vix_emoji, vix_comment = '😱', '극심한 패닉'
               vix_line = '{} VIX: {}{} {}'.format(vix_emoji, vix, diff_vix, vix_comment)
           except Exception as e:
               print('VIX error:', e)
@@ -240,12 +237,12 @@ jobs:
                   t10,
                   [3.0, 4.0, 4.5, 5.0],
                   [ICE, OK, WARN, HOT, FIRE],
-                  ['\uc800\ud3c9\uac00', '\uc801\uc815', '\uc8fc\uc758', '\uacfc\uc5f4', '\ubc84\ube14']
+                  ['저평가', '적정', '주의', '과열', '버블']
               )
-              t10_line = '{} \ubbf8\uad6d\uccb410\ub144: {}%{} {}'.format(t10_sig, t10, diff_t10, t10_com)
+              t10_line = '{} 미국채10년: {}%{} {}'.format(t10_sig, t10, diff_t10, t10_com)
           except Exception as e:
               print('T10 error:', e)
-              t10_line = '? \ubbf8\uad6d\uccb410\ub144: ' + ERR
+              t10_line = '? 미국채10년: ' + ERR
 
           # 나스닥100 PER
           try:
@@ -260,12 +257,12 @@ jobs:
                   per,
                   [20, 28, 33, 38],
                   [ICE, OK, WARN, HOT, FIRE],
-                  ['\uc800\ud3c9\uac00', '\uc801\uc815', '\uc8fc\uc758', '\uacfc\uc5f4', '\ubc84\ube14']
+                  ['저평가', '적정', '주의', '과열', '버블']
               )
-              per_line = '{} \ub098\uc2a4\ub2e5100 PER: {}\ubc30{} {} {}'.format(per_sig, per, diff_per_prev, diff_per_str, per_com)
+              per_line = '{} 나스닥100 PER: {}배{} {} {}'.format(per_sig, per, diff_per_prev, diff_per_str, per_com)
           except Exception as e:
               print('QQQ error:', e)
-              per_line = '? \ub098\uc2a4\ub2e5100 PER: ' + ERR
+              per_line = '? 나스닥100 PER: ' + ERR
 
           # 다우배당100
           try:
@@ -277,12 +274,12 @@ jobs:
                   div_yield,
                   [2.5, 3.0, 3.5, 4.0],
                   [FIRE, HOT, WARN, OK, ICE],
-                  ['\ubc84\ube14', '\uacfc\uc5f4', '\uc8fc\uc758', '\uc801\uc815', '\uc800\ud3c9\uac00']
+                  ['버블', '과열', '주의', '적정', '저평가']
               )
-              div_line = '{} \ub2e4\uc6b0\ubc30\ub2f9100: {}%{} {}'.format(div_sig, div_yield, diff_div, div_com)
+              div_line = '{} 다우배당100: {}%{} {}'.format(div_sig, div_yield, diff_div, div_com)
           except Exception as e:
               print('SCHD error:', e)
-              div_line = '? \ub2e4\uc6b0\ubc30\ub2f9100: ' + ERR
+              div_line = '? 다우배당100: ' + ERR
 
           # KOSPI PBR
           try:
@@ -298,9 +295,9 @@ jobs:
                   pbr,
                   [1.5, 2.0, 2.4, 2.8],
                   [ICE, OK, WARN, HOT, FIRE],
-                  ['\uc800\ud3c9\uac00', '\uc801\uc815', '\uc8fc\uc758', '\uacfc\uc5f4', '\ubc84\ube14']
+                  ['저평가', '적정', '주의', '과열', '버블']
               )
-              pbr_line = '{} KOSPI PBR: {}\ubc30{} {} {}'.format(pbr_sig, pbr, diff_pbr, diff_pbr_pct_str, pbr_com)
+              pbr_line = '{} KOSPI PBR: {}배{} {} {}'.format(pbr_sig, pbr, diff_pbr, diff_pbr_pct_str, pbr_com)
           except Exception as e:
               print('KOSPI PBR error:', e)
               pbr_line = '? KOSPI PBR: ' + ERR
@@ -308,9 +305,9 @@ jobs:
           # KOSPI ADR 20일
           try:
               df_adr = stock.get_market_price_change(prev30_str, today_str, market='KOSPI')
-              df_adr = df_adr[df_adr['\ub4f1\ub77d\ub960'] != 0]
-              up = len(df_adr[df_adr['\ub4f1\ub77d\ub960'] > 0])
-              down = len(df_adr[df_adr['\ub4f1\ub77d\ub960'] < 0])
+              df_adr = df_adr[df_adr['등락률'] != 0]
+              up = len(df_adr[df_adr['등락률'] > 0])
+              down = len(df_adr[df_adr['등락률'] < 0])
               adr = round(up / down * 100, 1) if down > 0 else 0
               today_data['kospi_adr'] = adr
               diff_adr = fmt_diff(adr, prev.get('kospi_adr'), '', 1)
@@ -318,7 +315,7 @@ jobs:
                   adr,
                   [75, 100, 125, 145],
                   [ICE, OK, WARN, HOT, FIRE],
-                  ['\uc800\ud3c9\uac00', '\uc801\uc815', '\uc8fc\uc758', '\uacfc\uc5f4', '\ubc84\ube14']
+                  ['저평가', '적정', '주의', '과열', '버블']
               )
               adr_line = '{} KOSPI ADR: {}{} {}'.format(adr_sig, adr, diff_adr, adr_com)
           except Exception as e:
@@ -331,7 +328,7 @@ jobs:
           except Exception as e:
               print('save error:', e)
 
-          msg = '[{} \uc8fc\uc694\uc9c0\ud45c {}]\n\n[\uae00\ub85c\ubc8c]\n{}\n{}\n{}\n\n[\ubbf8\uad6d]\n{}\n{}\n{}\n{}\n{}\n\n[\ud55c\uad6d]\n{}\n{}'.format(
+          msg = '[{} 주요지표 {}]\n\n[글로벌]\n{}\n{}\n{}\n\n[미국]\n{}\n{}\n{}\n{}\n{}\n\n[한국]\n{}\n{}'.format(
               date_str, w_emoji,
               fx_line, dxy_line, wti_line,
               fg_line, vix_line, t10_line, per_line, div_line,
@@ -343,6 +340,8 @@ jobs:
               json={'chat_id': chat_id, 'text': msg}
           )
           PYEOF
+
+          python3 /tmp/finance.py
 
       - name: Commit data
         run: |
