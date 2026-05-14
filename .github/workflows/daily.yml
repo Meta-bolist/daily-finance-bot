@@ -16,7 +16,7 @@ jobs:
       - name: Send Finance Alert
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TG_CHAT_ID: ${{ secrets.TELEGRAM_TEST_CHAT_ID }}
+          TG_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KRX_USER: ${{ secrets.KRX_ID }}
           KRX_PASS: ${{ secrets.KRX_PW }}
