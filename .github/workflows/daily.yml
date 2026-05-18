@@ -16,7 +16,7 @@ jobs:
       - name: Send Finance Alert
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TG_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TG_CHAT_ID: ${{ secrets.TELEGRAM_TEST_CHAT_ID }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KRX_USER: ${{ secrets.KRX_ID }}
           KRX_PASS: ${{ secrets.KRX_PW }}
@@ -281,11 +281,12 @@ jobs:
               print('SCHD error:', e)
               div_line = '? 다우배당100: ' + ERR
 
-          # KOSPI PBR
+          # KOSPI PBR (1001 = 코스피 전체)
           try:
-              df_pbr = stock.get_index_fundamental(prev5_str, today_str, '1028')
+              df_pbr = stock.get_index_fundamental(prev5_str, today_str, '1001')
               df_pbr = df_pbr[df_pbr['PBR'] > 0]
               pbr = round(float(df_pbr['PBR'].iloc[-1]), 2)
+              print('KOSPI PBR raw:', pbr)
               today_data['kospi_pbr'] = pbr
               diff_pbr = fmt_diff(pbr, prev.get('kospi_pbr'), '', 2)
               avg_pbr = 1.0
@@ -309,6 +310,7 @@ jobs:
               up = len(df_adr[df_adr['등락률'] > 0])
               down = len(df_adr[df_adr['등락률'] < 0])
               adr = round(up / down * 100, 1) if down > 0 else 0
+              print('KOSPI ADR raw:', adr)
               today_data['kospi_adr'] = adr
               diff_adr = fmt_diff(adr, prev.get('kospi_adr'), '', 1)
               adr_sig, adr_com = grade(
